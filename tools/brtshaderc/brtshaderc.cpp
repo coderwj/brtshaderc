@@ -238,19 +238,27 @@ namespace shaderc
         // set varyingdef
         std::string defaultVarying = dir + "varying.def.sc";
         const char* varyingdef = varyingPath ? varyingPath : defaultVarying.c_str();
-        bgfx::File attribdef(varyingdef);
-        const char* parse = attribdef.getData();
-        if (NULL != parse
-        &&  *parse != '\0')
-        {
-            options.dependencies.push_back(varyingdef);
-        }
-        else
-        {
-            fprintf(stderr, "ERROR: Failed to parse varying def file: \"%s\" No input/output semantics will be generated in the code!\n", varyingdef);
-            return nullptr;
-        }
+		bx::FileReader varyingReader;
+		if (!bx::open(&varyingReader, varyingdef))
+		{
+			fprintf(stderr, "Unable to open file '%s'.\n", varyingdef);
+			return nullptr;
+		}
 
+		uint32_t varyingdefSize = (uint32_t)bx::getSize(&varyingReader);
+		if (0 == varyingdefSize)
+		{
+			fprintf(stderr, "Unable to getSize file '%s'.\n", varyingdef);
+			return nullptr;
+		}
+
+		bx::DefaultAllocator defaultAllocator;
+		char* varyingdefData = (char*)BX_ALLOC(&defaultAllocator, varyingdefSize);
+
+		bx::read(&varyingReader, varyingdefData, varyingdefSize);
+		bx::close(&varyingReader);
+
+		options.dependencies.push_back(varyingdef);
 
 
         // read shader source file
@@ -287,7 +295,7 @@ namespace shaderc
         // compile shader.
 
         BufferWriter writer;
-        if ( bgfx::compileShader(attribdef.getData(), commandLineComment.c_str(), data, size, options, &writer) )
+        if ( bgfx::compileShader(varyingdefData, commandLineComment.c_str(), data, size, options, &writer) )
         {
             // this will copy the compiled shader data to a memory block and return mem ptr
             return writer.finalize();
@@ -480,17 +488,27 @@ namespace shaderc
         {
             std::string defaultVarying = dir + "varying.def.sc";
             const char* varyingdef = cmdLine.findOption("varyingdef", defaultVarying.c_str() );
-            File attribdef(varyingdef);
-            const char* parse = attribdef.getData();
-            if (NULL != parse
-            &&  *parse != '\0')
-            {
-                options.dependencies.push_back(varyingdef);
-            }
-            else
-            {
-                fprintf(stderr, "ERROR: Failed to parse varying def file: \"%s\" No input/output semantics will be generated in the code!\n", varyingdef);
-            }
+			bx::FileReader varyingReader;
+			if (!bx::open(&varyingReader, varyingdef))
+			{
+				fprintf(stderr, "Unable to open file '%s'.\n", varyingdef);
+				return bx::kExitFailure;
+			}
+
+			uint32_t varyingdefSize = (uint32_t)bx::getSize(&varyingReader);
+			if (0 == varyingdefSize)
+			{
+				fprintf(stderr, "Unable to getSize file '%s'.\n", varyingdef);
+				return bx::kExitFailure;
+			}
+
+			bx::DefaultAllocator defaultAllocator;
+			char* varyingdefData = (char*)BX_ALLOC(&defaultAllocator, varyingdefSize);
+
+			bx::read(&varyingReader, varyingdefData, varyingdefSize);
+			bx::close(&varyingReader);
+
+			options.dependencies.push_back(varyingdef);
 
             const size_t padding    = 16384;
             uint32_t size = (uint32_t)bx::getSize(&reader);
@@ -529,7 +547,7 @@ namespace shaderc
                 return bx::kExitFailure;
             }
 
-            compiled = compileShader(attribdef.getData(), commandLineComment.c_str(), data, size, options, writer);
+            compiled = compileShader(varyingdefData, commandLineComment.c_str(), data, size, options, writer);
 
             bx::close(writer);
             ///@delete writer;
