@@ -65,6 +65,11 @@ namespace bgfx
         return false;
     }
 
+	bool compileMetalShader(const Options&, uint32_t, const std::string&, bx::WriterI*)
+	{
+		return false;
+	}
+
     const char* getPsslPreamble()
     {
         return "";
@@ -253,10 +258,11 @@ namespace shaderc
 		}
 
 		bx::DefaultAllocator defaultAllocator;
-		char* varyingdefData = (char*)BX_ALLOC(&defaultAllocator, varyingdefSize);
+		char* varyingdefData = (char*)BX_ALLOC(&defaultAllocator, varyingdefSize+1);
 
 		bx::read(&varyingReader, varyingdefData, varyingdefSize);
 		bx::close(&varyingReader);
+		varyingdefData[varyingdefSize] = '\0';
 
 		options.dependencies.push_back(varyingdef);
 
